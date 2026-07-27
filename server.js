@@ -3,10 +3,29 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 const jwt = require('jsonwebtoken');
 const Database = require('better-sqlite3');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
+
+// ===== File uploads (program .exe files) =====
+// NOTE: attach a Railway volume mounted at this path, or uploaded files
+// will be lost on every redeploy — same as the SQLite db file.
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+app.use('/uploads', express.static(UPLOAD_DIR));
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => {
+    const safe = Date.now() + '-' + file.originalname.replace(/[^a-z0-9.\-_]/gi, '_');
+    cb(null, safe);
+  }
+});
+const upload = multer({ storage, limits: { fileSize: 2 * 1024 * 1024 * 1024 } }); // 2GB cap
 
 // ===== ENV VARS (set these in Railway — never hardcode) =====
 const {
@@ -112,6 +131,12 @@ function requireOwner(req, res, next) {
 app.get('/me', requireAuth, (req, res) => res.json(req.user));
 
 // ===== Programs API =====
+app.post('/programs/upload', requireAuth, requireOwner, upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file received' });
+  const publicUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  res.json({ url: publicUrl, filename: req.file.originalname });
+});
+
 app.get('/programs', requireAuth, (req, res) => {
   const rows = db.prepare('SELECT * FROM programs ORDER BY created_at DESC').all();
   res.json(rows);
