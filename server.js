@@ -12,7 +12,6 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 
-// NOTE: attach a Railway volume mounted at this path, or uploaded files
 // will be lost on every redeploy — same as the SQLite db file.
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
