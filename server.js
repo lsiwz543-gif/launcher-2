@@ -11,7 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-// ===== File uploads (program .exe files) =====
+
 // NOTE: attach a Railway volume mounted at this path, or uploaded files
 // will be lost on every redeploy — same as the SQLite db file.
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
